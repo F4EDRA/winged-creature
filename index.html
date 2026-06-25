@@ -74,6 +74,34 @@
 
     }
 
+    .feed-status {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      gap: 12px;
+
+      margin-top: 12px;
+
+      font-family: Arial, sans-serif;
+
+      font-size: 12px;
+
+      letter-spacing: 0.16em;
+
+      text-transform: uppercase;
+
+      color: rgba(17,17,17,0.68);
+
+    }
+
+    .feed-status span {
+
+      overflow-wrap: anywhere;
+
+    }
+
     .live-fallback {
 
       margin-top: 14px;
@@ -168,6 +196,8 @@
 
       <iframe
 
+        id="live-frame"
+
         src="https://www.youtube-nocookie.com/embed/Ly5EU4MncKE?autoplay=1&mute=1&playsinline=1&rel=0"
 
         title="winged-creature live feed"
@@ -180,11 +210,19 @@
 
     </div>
 
+    <div class="feed-status">
+
+      <span id="feed-name">winged-creature</span>
+
+      <span id="feed-timer">live from the eye</span>
+
+    </div>
+
     <div class="live-fallback">
 
       If the embedded player keeps loading, open the live feed directly:
 
-      <a href="https://www.youtube.com/live/Ly5EU4MncKE" target="_blank" rel="noopener">youtube.com/live/Ly5EU4MncKE</a>
+      <a id="feed-link" href="https://www.youtube.com/live/Ly5EU4MncKE" target="_blank" rel="noopener">youtube.com/live/Ly5EU4MncKE</a>
 
     </div>
 
@@ -196,7 +234,7 @@
 
     </div>
 
-    <div class="signal">
+    <div class="signal" id="signal">
 
       Searching for satellites / rerouting / no signal
 
@@ -209,6 +247,157 @@
     </div>
 
   </main>
+
+  <script>
+
+    const primaryFeed = {
+      title: "winged-creature",
+      signal: "Local eye / hood-mounted signal",
+      id: "Ly5EU4MncKE",
+      url: "https://www.youtube.com/live/Ly5EU4MncKE"
+    };
+
+    const externalFeeds = [
+      {
+        title: "Earth from the ISS",
+        signal: "Orbital camera / Earth drift",
+        id: "fO9e9jnhYK8",
+        url: "https://www.youtube.com/watch?v=fO9e9jnhYK8"
+      },
+      {
+        title: "Times Square Crossroads",
+        signal: "Street grid / New York",
+        id: "z-jYdOIKcTQ",
+        url: "https://www.youtube.com/watch?v=z-jYdOIKcTQ"
+      },
+      {
+        title: "NYC Live Cam",
+        signal: "Urban scan / skyline and streets",
+        id: "VGnFLdQW39A",
+        url: "https://www.youtube.com/watch?v=VGnFLdQW39A"
+      },
+      {
+        title: "Namib Desert Waterhole",
+        signal: "Desert watch / animal crossing",
+        id: "ydYDqZQpim8",
+        url: "https://www.youtube.com/watch?v=ydYDqZQpim8"
+      },
+      {
+        title: "Brooks Falls Bears",
+        signal: "River system / salmon and bears",
+        id: "EwTH5yY7Mks",
+        url: "https://www.youtube.com/watch?v=EwTH5yY7Mks"
+      },
+      {
+        title: "Monterey Bay Jelly Cam",
+        signal: "Aquarium pulse / sea nettles",
+        id: "m1XcdxjVGos",
+        url: "https://www.youtube.com/watch?v=m1XcdxjVGos"
+      },
+      {
+        title: "Coral City Camera",
+        signal: "Urban reef / free-range aquarium",
+        id: "7i8ARjIeM2k",
+        url: "https://www.youtube.com/watch?v=7i8ARjIeM2k"
+      },
+      {
+        title: "Northern Lights",
+        signal: "Aurora watch / polar sky",
+        id: "a0i1Kg6fROg",
+        url: "https://www.youtube.com/watch?v=a0i1Kg6fROg"
+      },
+      {
+        title: "Port of Rotterdam",
+        signal: "Industrial tide / container movement",
+        id: "M09NaBVPjAI",
+        url: "https://www.youtube.com/watch?v=M09NaBVPjAI"
+      },
+      {
+        title: "LAX Airport Action",
+        signal: "Runway choreography / air traffic",
+        id: "KzsNnyN8D_Q",
+        url: "https://www.youtube.com/watch?v=KzsNnyN8D_Q"
+      }
+    ];
+
+    const primaryDuration = 5 * 60 * 1000;
+    const externalDuration = 60 * 1000;
+    const externalSlots = 5;
+    const cycleDuration = primaryDuration + externalDuration * externalSlots;
+    const frame = document.getElementById("live-frame");
+    const feedName = document.getElementById("feed-name");
+    const feedTimer = document.getElementById("feed-timer");
+    const feedLink = document.getElementById("feed-link");
+    const signal = document.getElementById("signal");
+    let activeKey = "";
+    let activeCycle = -1;
+    let cycleFeeds = [];
+
+    function embedUrl(feed) {
+      return `https://www.youtube-nocookie.com/embed/${feed.id}?autoplay=1&mute=1&playsinline=1&rel=0`;
+    }
+
+    function shuffledFeeds() {
+      return [...externalFeeds].sort(() => Math.random() - 0.5).slice(0, externalSlots);
+    }
+
+    function currentFeed(now) {
+      const cycle = Math.floor(now / cycleDuration);
+      const elapsed = now % cycleDuration;
+
+      if (cycle !== activeCycle) {
+        activeCycle = cycle;
+        cycleFeeds = shuffledFeeds();
+      }
+
+      if (elapsed < primaryDuration) {
+        return {
+          feed: primaryFeed,
+          key: `primary-${cycle}`,
+          remaining: primaryDuration - elapsed,
+          mode: "live from the eye"
+        };
+      }
+
+      const externalElapsed = elapsed - primaryDuration;
+      const slot = Math.floor(externalElapsed / externalDuration);
+      const feed = cycleFeeds[slot] || externalFeeds[slot % externalFeeds.length];
+
+      return {
+        feed,
+        key: `external-${cycle}-${slot}-${feed.id}`,
+        remaining: externalDuration - (externalElapsed % externalDuration),
+        mode: "rerouting"
+      };
+    }
+
+    function formatRemaining(ms) {
+      const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, "0");
+      const seconds = String(totalSeconds % 60).padStart(2, "0");
+      return `${minutes}:${seconds}`;
+    }
+
+    function updateFeed() {
+      const state = currentFeed(Date.now());
+
+      if (state.key !== activeKey) {
+        activeKey = state.key;
+        frame.src = embedUrl(state.feed);
+        frame.title = `${state.feed.title} live feed`;
+        feedName.textContent = state.feed.title;
+        feedLink.href = state.feed.url;
+        feedLink.textContent = state.feed.url.replace("https://", "");
+        signal.textContent = `${state.mode} / ${state.feed.signal}`;
+      }
+
+      feedTimer.textContent = `${state.mode} / ${formatRemaining(state.remaining)}`;
+    }
+
+    updateFeed();
+    setInterval(updateFeed, 1000);
+
+  </script>
 
 </body>
 
